@@ -112,6 +112,10 @@ apt-add-repository "deb http://apt.kubernetes.io/ kubernetes-xenial main"
 apt install -qq -y kubeadm=1.21.0-00 kubelet=1.21.0-00 kubectl=1.21.0-00
 }
 ```
+##### Edit kubelet
+```
+Follow: https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/configure-cgroup-driver/#using-the-cgroupfs-driver
+```
 
 ## On the master node (kmaster)
 
