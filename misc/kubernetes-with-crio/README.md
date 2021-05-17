@@ -77,7 +77,7 @@ sysctl --system
 {
 
 OS=xUbuntu_20.04
-VERSION=1.20
+VERSION=1.21
 
 cat >>/etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list<<EOF
 deb https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/$OS/ /
@@ -92,10 +92,28 @@ curl -L https://download.opensuse.org/repositories/devel:kubic:libcontainers:sta
 
 apt update && apt install -qq -y cri-o cri-o-runc cri-tools
 
-cat >>/etc/crio/crio.conf.d/02-cgroup-manager.conf<<EOF
+#Uncomment for cgroupfs
+#cat >>/etc/crio/crio.conf.d/02-cgroup-manager.conf<<EOF
+#[crio.runtime]
+#conmon_cgroup = "pod"
+#cgroup_manager = "cgroupfs"
+#EOF
+
+#Set runtime capabilities (add NET_RAW)
+cat >>/etc/crio/crio.conf.d/03-runtime-capabilities.conf<<EOF
 [crio.runtime]
-conmon_cgroup = "pod"
-cgroup_manager = "cgroupfs"
+default_capabilities = [
+	"CHOWN",
+	"DAC_OVERRIDE",
+	"FSETID",
+	"FOWNER",
+	"SETGID",
+	"SETUID",
+	"SETPCAP",
+	"NET_BIND_SERVICE",
+	"KILL",
+	"NET_RAW",
+]
 EOF
 
 systemctl daemon-reload
@@ -109,7 +127,7 @@ systemctl enable --now crio
 {
 curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
 apt-add-repository "deb http://apt.kubernetes.io/ kubernetes-xenial main"
-apt install -qq -y kubeadm=1.21.0-00 kubelet=1.21.0-00 kubectl=1.21.0-00
+apt install -qq -y kubeadm=1.21.1-00 kubelet=1.21.1-00 kubectl=1.21.1-00
 }
 ```
 
@@ -117,12 +135,30 @@ apt install -qq -y kubeadm=1.21.0-00 kubelet=1.21.0-00 kubectl=1.21.0-00
 
 ##### Initialize kubernetes cluster
 ```
-kubeadm init --apiserver-advertise-address=172.16.16.100 --pod-network-cidr=192.168.0.0/16
+{
+CONTROLPLANEENDPOINT=k8s-prod-cluster-endpoint.example.local:6443
+PODSUBNET="192.168.0.0/16"
+CGROUPDRIVER=systemd
+
+cat >>./kubeadm.conf<<EOF
+apiVersion: kubeadm.k8s.io/v1beta2
+kind: ClusterConfiguration
+controlPlaneEndpoint: $CONTROLPLANEENDPOINT
+networking:
+  podSubnet: "$PODSUBNET"
+---
+apiVersion: kubelet.config.k8s.io/v1beta1
+kind: KubeletConfiguration
+cgroupDriver: $CGROUPDRIVER
+EOF
+
+kubeadm init --config=./kubeadm.conf
+}
 ```
 
 ##### Deploy network add on - Calico
 ```
-kubectl --kubeconfig=/etc/kubernetes/admin.conf create -f https://docs.projectcalico.org/v3.18/manifests/calico.yaml
+kubectl --kubeconfig=/etc/kubernetes/admin.conf create -f https://docs.projectcalico.org/v3.19/manifests/calico.yaml
 ```
 
 ##### Generate join command for worker nodes
