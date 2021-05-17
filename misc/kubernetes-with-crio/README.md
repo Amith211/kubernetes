@@ -140,7 +140,7 @@ CONTROLPLANEENDPOINT=k8s-prod-cluster-endpoint.example.local:6443
 PODSUBNET="192.168.0.0/16"
 CGROUPDRIVER=systemd
 
-cat >>~/kubeadm.conf<<EOF
+cat >>./kubeadm.conf<<EOF
 apiVersion: kubeadm.k8s.io/v1beta2
 kind: ClusterConfiguration
 controlPlaneEndpoint: $CONTROLPLANEENDPOINT
@@ -152,7 +152,7 @@ kind: KubeletConfiguration
 cgroupDriver: $CGROUPDRIVER
 EOF
 
-kubeadm init --config=~/kubeadm.conf
+kubeadm init --config=./kubeadm.conf
 }
 ```
 
